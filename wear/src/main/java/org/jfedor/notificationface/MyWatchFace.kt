@@ -9,10 +9,11 @@ import android.os.Bundle
 import android.support.wearable.watchface.CanvasWatchFaceService
 import android.support.wearable.watchface.WatchFaceService
 import android.support.wearable.watchface.WatchFaceStyle
-import android.util.Log
 import android.view.SurfaceHolder
 import com.google.android.gms.wearable.*
 import java.util.*
+import kotlin.math.round
+import kotlin.math.roundToInt
 
 class MyWatchFace : CanvasWatchFaceService() {
 
@@ -36,7 +37,7 @@ class MyWatchFace : CanvasWatchFaceService() {
 
         private var registeredTimeZoneReceiver = false
 
-        private lateinit var mTextPaint: Paint
+        private lateinit var textPaint: Paint
 
         private var bitmaps: List<Bitmap> = listOf()
         private var safeBitmaps: List<Bitmap> = listOf()
@@ -59,11 +60,10 @@ class MyWatchFace : CanvasWatchFaceService() {
 
             calendar = Calendar.getInstance()
 
-            mTextPaint = Paint().apply {
+            textPaint = Paint().apply {
                 typeface = this@Engine.typeface
                 isAntiAlias = true
                 color = Color.WHITE
-                textSize = 120f
                 textAlign = Paint.Align.CENTER
             }
         }
@@ -86,13 +86,15 @@ class MyWatchFace : CanvasWatchFaceService() {
             ambient = inAmbientMode
 
             if (lowBitAmbient) {
-                mTextPaint.isAntiAlias = !inAmbientMode
+                textPaint.isAntiAlias = !inAmbientMode
             }
 
-            mTextPaint.typeface = if (ambient) ambientTypeface else typeface
+            textPaint.typeface = if (ambient) ambientTypeface else typeface
         }
 
         override fun onDraw(canvas: Canvas, bounds: Rect) {
+            val size = bounds.width()
+
             canvas.drawColor(Color.BLACK)
 
             calendar.timeInMillis = System.currentTimeMillis()
@@ -101,20 +103,23 @@ class MyWatchFace : CanvasWatchFaceService() {
                     calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE))
 
             val textX = bounds.width() * 0.5f
-            val textY = bounds.height() * 0.5f + if (bitmaps.isEmpty()) 32f else -12f
-            canvas.drawText(text, textX, textY, mTextPaint)
+            val textY = round(bounds.height() * 0.5f +
+                    if (bitmaps.isEmpty()) size * 0.1f else size * -0.033f)
+            textPaint.textSize = round(size / 3f)
+            canvas.drawText(text, textX, textY, textPaint)
 
             val padding = 2
             var x = bounds.width() / 2 - (bitmaps.size * (ICON_SIZE + padding) / 2)
-            var y = bounds.height() / 2 + 32
+            var y = bounds.height() / 2 + (size*0.088f).roundToInt()
             if (ambient) {
-                x += random.nextInt(64) - 32
-                y += random.nextInt(64)
+                val maxOffset = (size*0.177f).roundToInt()
+                x += random.nextInt(maxOffset) - maxOffset/2
+                y += random.nextInt(maxOffset)
             }
             for ((i, bitmap) in (if (ambient && burnInProtection) safeBitmaps else bitmaps).withIndex()) {
                 canvas.drawBitmap(bitmap, null, Rect(x + i * (ICON_SIZE + padding), y,
                         x + i * (ICON_SIZE + padding) + ICON_SIZE, y + ICON_SIZE),
-                        mTextPaint)
+                        textPaint)
             }
         }
 
